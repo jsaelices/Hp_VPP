@@ -1,0 +1,459 @@
+__author__ = 'jaime'
+
+import wx
+import os
+import csv
+import sys
+import numpy as np
+import shutil
+import glob
+import subprocess
+import time
+import threading
+import tempfile
+import xml.dom.minidom
+import math
+import matplotlib
+matplotlib.interactive(False)
+matplotlib.use('WXAgg')
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import *
+from matplotlib.font_manager import FontProperties
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+import pandas
+import argparse
+
+class splashScreen(wx.SplashScreen):
+
+    def __init__(self, parent=None):
+        tobitmap = wx.Image(name= "graphics\\logo.png").ConvertToBitmap()
+        splashStyle = wx.SPLASH_CENTER_ON_SCREEN | wx.SPLASH_TIMEOUT
+        splashDuration = 400
+        wx.SplashScreen.__init__(self, tobitmap, splashStyle, splashDuration, parent)
+
+    # def OnExit(self, evt):
+    #     self.Hide()
+    #     MyFrame = App(None, -1, "-")
+    #     app.SetTopWindow(MyFrame)
+    #     MyFrame.Show(True)
+    #     evt.Skip()
+
+class NodeTree(wx.TreeCtrl):
+
+    def __init__(self, parent, id, position, size, style):
+        global newFile
+        tree_case = wx.TreeCtrl.__init__(self, parent, id, position, size, style)
+        root = self.AddRoot(newFile)
+        os = self.AppendItem(root, 'Hydro components')
+        pl = self.AppendItem(root, 'Aero components')
+        tk = self.AppendItem(root, 'Runs')
+        # self.AppendItem(os, 'Linux')
+        # self.AppendItem(os, 'FreeBSD')
+        # self.AppendItem(os, 'OpenBSD')
+        # self.AppendItem(os, 'NetBSD')
+        # self.AppendItem(os, 'Solaris')
+        # cl = self.AppendItem(pl, 'Compiled languages')
+        # sl = self.AppendItem(pl, 'Scripting languages')
+        # self.AppendItem(cl, 'Java')
+        # self.AppendItem(cl, 'C++')
+        # self.AppendItem(cl, 'C')
+        # self.AppendItem(cl, 'Pascal')
+        # self.AppendItem(sl, 'Python')
+        # self.AppendItem(sl, 'Ruby')
+        # self.AppendItem(sl, 'Tcl')
+        # self.AppendItem(sl, 'PHP')
+        # self.AppendItem(tk, 'Qt')
+        # self.AppendItem(tk, 'MFC')
+        # self.AppendItem(tk, 'wxPython')
+        # self.AppendItem(tk, 'GTK+')
+        # self.AppendItem(tk, 'Swing')
+        self.ExpandAll()
+
+class TabPanel(wx.Panel):
+
+    def __init__(self, parent):
+
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        txtOne = wx.TextCtrl(self, wx.ID_ANY, "")
+        txtTwo = wx.TextCtrl(self, wx.ID_ANY, "")
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(txtOne, 0, wx.ALL, 5)
+        sizer.Add(txtTwo, 0, wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+class nbk_reports(wx.Notebook):
+
+    def __init__(self, parent):
+        wx.Notebook.__init__(self, parent, id=wx.ID_ANY, style=wx.BK_DEFAULT)
+
+        # Create the first tab and add it to the notebook
+        tabOne = TabPanel(self)
+        self.AddPage(tabOne, "Hydro forces")
+        tabTwo = TabPanel(self)
+        self.AddPage(tabTwo, "Aero forces")
+        self.AddPage(TabPanel(self), "Equilibrium")
+        self.AddPage(TabPanel(self), "Global report")
+
+        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
+
+    def OnPageChanged(self, event):
+        old = event.GetOldSelection()
+        new = event.GetSelection()
+        sel = self.GetSelection()
+        print 'OnPageChanged,  old:%d, new:%d, sel:%d\n' % (old, new, sel)
+        event.Skip()
+
+    def OnPageChanging(self, event):
+        old = event.GetOldSelection()
+        new = event.GetSelection()
+        sel = self.GetSelection()
+        print 'OnPageChanging, old:%d, new:%d, sel:%d\n' % (old, new, sel)
+        event.Skip()
+
+class NewWindow(wx.Frame):
+
+    def __init__(self, parent, title):
+        wx.Frame.__init__(self, parent, wx.ID_ANY, "")
+        wx.Frame.CenterOnScreen(self)
+        wx.Panel(self)
+
+class MainFrame(wx.Frame):
+
+    def __init__(self, parent, title):
+        wx.Frame.__init__(self, parent, title="High Performance Velocity Prediction Program")
+
+        mySplash = splashScreen()
+        mySplash.Show()
+        #wx.Sleep(4)
+
+        menuBar = wx.MenuBar()
+
+        file_menu = wx.Menu()
+
+        global new_run
+        menuBar.Append(file_menu,"File")
+        new_run = file_menu.Append(wx.ID_NEW, "New Run","New VPP run for a yacht or fleet")
+        self.Bind(wx.EVT_MENU, self.OnNewRun, new_run)
+        open_run = file_menu.Append(wx.ID_OPEN, "Open Run","Open a previous VPP project")
+        self.Bind(wx.EVT_MENU, self.OnOpenRun, open_run)
+        save = file_menu.Append(wx.ID_SAVE, "Save", "Save the project with initial name")
+        self.Bind(wx.EVT_MENU, self.OnSave, save)
+        save_as = file_menu.Append(wx.ID_SAVEAS, "Save as", "Save the project with custom name")
+        self.Bind(wx.EVT_MENU, self.OnSaveAs, save_as)
+
+        import_menu = wx.Menu()
+
+        file_menu.AppendSubMenu(import_menu, "Import")
+        import_cfd = import_menu.Append(wx.ID_ANY, "CFD data", "Import data from CFD analysis")
+        self.Bind(wx.EVT_MENU, self.OnImportdata, import_cfd)
+        import_wtd = import_menu.Append(wx.ID_ANY, "Wind tunnel data", "Import data from wind tunnel analysis")
+        self.Bind(wx.EVT_MENU, self.OnImportdata, import_wtd)
+
+        export_menu = wx.Menu()
+
+        file_menu.AppendSubMenu(export_menu, "Export")
+        export_rep = export_menu.Append(wx.ID_ANY, "Report", "Export report as odt or pdf")
+        self.Bind(wx.EVT_MENU, self.OnExport_rep, export_rep)
+        export_gra = export_menu.Append(wx.ID_ANY, "Graph", "Export graph as a picture")
+        self.Bind(wx.EVT_MENU, self.OnExport_gra, export_gra)
+
+        exit = file_menu.Append(wx.ID_EXIT, "Exit", "Exit from the application")
+        self.Bind(wx.EVT_MENU, self.OnExit, exit)
+        self.Bind(wx.EVT_CLOSE, self.OnExit)
+
+        yacht_menu = wx.Menu()
+
+        menuBar.Append(yacht_menu, "Yacht")
+        newy = yacht_menu.Append(wx.ID_ANY, "New yacht", "Create new yacht to analyze")
+        self.Bind(wx.EVT_MENU, self.OnNewy, newy)
+        addy = yacht_menu.Append(wx.ID_ANY, "Add yacht", "Add yacht to perform fleet analysis")
+        self.Bind(wx.EVT_MENU, self.OnAddy, addy)
+        flota = yacht_menu.Append(wx.ID_ANY, "Flotation", "Flotation data")
+        self.Bind(wx.EVT_MENU, self.OnFlota, flota)
+        windag_h = yacht_menu.Append(wx.ID_ANY, "Windage", "Hull windage data")
+        self.Bind(wx.EVT_MENU, self.OnWindag_h, windag_h)
+
+        sails_menu = wx.Menu()
+
+        menuBar.Append(sails_menu, "Sails")
+        sails = sails_menu.Append(wx.ID_ANY, "Sails", "Sails definition")
+        self.Bind(wx.EVT_MENU, self.OnSails, sails)
+        sails_set = sails_menu.Append(wx.ID_ANY, "Sails set", "Group of sails used in analysis")
+        self.Bind(wx.EVT_MENU, self.OnSails_set, sails_set)
+
+        wind_menu = wx.Menu()
+
+        menuBar.Append(wind_menu, "Wind")
+        winds = wind_menu.Append(wx.ID_ANY, "Wind sets", "Wind speeds for analysis")
+        self.Bind(wx.EVT_MENU, self.OnWinds, winds)
+        winda = wind_menu.Append(wx.ID_ANY, "Wind angle sets", "Wind angles for analysis")
+        self.Bind(wx.EVT_MENU, self.OnWinda, winda)
+
+        rig_menu = wx.Menu()
+
+        menuBar.Append(rig_menu, "Rig")
+        rigt = rig_menu.Append(wx.ID_ANY, "Rig type", "Rig data")
+        self.Bind(wx.EVT_MENU, self.OnRigt, rigt)
+        windag_r = rig_menu.Append(wx.ID_ANY, "Windage", "Rig windage data")
+        self.Bind(wx.EVT_MENU, self.OnWindag_r, windag_r)
+
+        settings_menu = wx.Menu()
+
+        menuBar.Append(settings_menu, "Settings")
+        opsets = settings_menu.Append(wx.ID_ANY, "Opsets", "Analysis input data")
+        self.Bind(wx.EVT_MENU, self.OnOpsets, opsets)
+        hydrom = settings_menu.Append(wx.ID_ANY, "Hydro models", "Hydrodynamic models used for analysis")
+        self.Bind(wx.EVT_MENU, self.OnHydrom, hydrom)
+        aerom = settings_menu.Append(wx.ID_ANY, "Aero models", "Aerodynamic models used for analysis")
+        self.Bind(wx.EVT_MENU, self.OnAerom, aerom)
+        report_out = settings_menu.Append(wx.ID_ANY, "Report output", "Data showed on reports")
+        self.Bind(wx.EVT_MENU, self.OnReport_out, report_out)
+        graph_out = settings_menu.Append(wx.ID_ANY, "Graph output", "Graph type and data")
+        self.Bind(wx.EVT_MENU, self.OnGraph_out, graph_out)
+
+        run_menu = wx.Menu()
+
+        menuBar.Append(run_menu, "Run VPP")
+
+        run_yacht_menu = wx.Menu()
+
+        run_menu.AppendSubMenu(run_yacht_menu, "Run yacht")
+        ry_full = run_yacht_menu.Append(wx.ID_ANY, "Full data", "Run full analysis for current yacht")
+        self.Bind(wx.EVT_MENU, self.OnRy_full, ry_full)
+        ry_report = run_yacht_menu.Append(wx.ID_ANY, "Reports", "Run only for reports output for current yacht")
+        self.Bind(wx.EVT_MENU, self.OnRy_report, ry_report)
+        ry_graph = run_yacht_menu.Append(wx.ID_ANY, "Graphs", "Run only for graphs output for current yacht")
+        self.Bind(wx.EVT_MENU, self.OnRy_graph, ry_graph)
+
+        run_fleet_menu = wx.Menu()
+
+        run_menu.AppendSubMenu(run_fleet_menu, "Run fleet")
+        rf_full = run_fleet_menu.Append(wx.ID_ANY, "Full data", "Run full analysis for fleet")
+        self.Bind(wx.EVT_MENU, self.OnRf_full, rf_full)
+        rf_report = run_fleet_menu.Append(wx.ID_ANY, "Reports", "Run only for reports output for fleet")
+        self.Bind(wx.EVT_MENU, self.OnRf_report, rf_report)
+        rf_graph = run_fleet_menu.Append(wx.ID_ANY, "Graphs", "Run only for graphs output for fleet")
+        self.Bind(wx.EVT_MENU, self.OnRf_graph, rf_graph)
+
+        self.SetMenuBar(menuBar)
+        self.Show(True)
+
+    def OnNewRun(self, event):
+        global new_run
+        global curDir
+        global tempFile
+        global fullPath
+        global newFile
+        global newProject
+        tempFile = tempfile.NamedTemporaryFile(mode='w+t')
+        curDir = os.getcwd()
+        extension = ".vpp"
+        dlg = wx.TextEntryDialog(None, "Enter name of the new project:", "New project", "NewVPP")
+        if dlg.ShowModal() == wx.ID_OK:
+            newProject = dlg.GetValue()
+            newFile = newProject + extension
+            #fileOper = open(newFile, "wb")
+            #fileOper.write("New vpp data file created temporary")
+            #fileOper.close()
+            fullPath = os.path.join(curDir, newFile)
+            self.showEnvironment()
+            new_run.Enable(False)
+            return fullPath
+        else:
+            pass
+
+    def showEnvironment(self):
+        self.splitter = wx.SplitterWindow(self, -1, style=wx.SP_3D)
+        leftPanel = wx.Panel(self.splitter, -1)
+        leftBox = wx.BoxSizer(wx.VERTICAL)
+        self.tree = NodeTree(leftPanel, 1, wx.DefaultPosition, wx.DefaultSize, wx.TR_NO_BUTTONS)
+        leftBox.Add(self.tree, 1, wx.EXPAND|wx.FIXED_MINSIZE)
+        self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged, id=1)
+        leftPanel.SetSizerAndFit(leftBox)
+
+        rightPanel = wx.Panel(self.splitter, -1)
+        rightBox = wx.BoxSizer(wx.VERTICAL)
+        nbk = nbk_reports(rightPanel)
+        rightBox.Add(nbk, -1, wx.EXPAND)
+        rightPanel.SetSizerAndFit(rightBox)
+        self.splitter.SplitVertically(leftPanel, rightPanel)
+        self.Centre()
+        self.CreateStatusBar()
+
+    def OnOpenRun(self, event):
+        wildcard = "*.vpp"
+        dlg = wx.FileDialog(self, "Open a VPP file", "", "",  wildcard, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            dir = dlg.GetPath()
+            vppFile = os.path.split(dir)[1]
+        else:
+            pass
+
+    def OnSave(self, event):
+        global tempFile
+        global newProject
+        global fullPath
+        global newFile
+        global savedFile
+        global savingPath
+        global sfile
+        sfile = ""
+        try:
+            if os.path.isfile(sfile):
+                file = open(sfile, "wb")
+                file.write("")
+                file.close()
+                message = "File " + str(sfile) + " overwrited successfully"
+                wx.MessageBox(message)
+            else:
+                if not os.path.isfile(fullPath):
+                    file = open(fullPath, "wb")
+                    file.write("")
+                    file.close()
+                    message = "File " + str(newFile) + " saved successfully"
+                    wx.MessageBox(message)
+                else:
+                    file = open(fullPath, "wb")
+                    file.write("")
+                    file.close()
+                    message = "File " + str(newFile) + " overwrited successfully"
+                    wx.MessageBox(message)
+        except NameError:
+            wx.MessageBox("Error determining the file to save!")
+
+    def OnSaveAs(self, event):
+        global tempFile
+        global newProject
+        global savedFile
+        global newFile
+        global fullPath
+        global savingPath
+        global sfile
+        wildcard = "*.vpp"
+        try:
+            if not os.path.isfile(fullPath):
+                dlg = wx.FileDialog(self, "Save as", "", "",  wildcard, wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+                if dlg.ShowModal() == wx.ID_OK:
+                    sfile = dlg.GetPath()
+                    savingPath = os.path.dirname(dlg.GetPath())
+                    savedFile = os.path.basename(dlg.GetPath())
+                    file = open(sfile, "wb")
+                    file.write("")
+                    file.close()
+                    dlg.Destroy()
+                else:
+                    pass
+        except NameError:
+            wx.MessageBox("No new project created!")
+
+    def OnImportdata(self, event):
+        wildcard = "*.csv"
+        dlg = wx.FileDialog(self, "Open a csv data file", "", "",  wildcard, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            dir = dlg.GetPath()
+            csvFile = os.path.split(dir)[1]
+        else:
+            wx.MessageBox("No file to open")
+        pass
+
+    def OnExport_rep(self, event):
+        #EXPORT AS PDF FILE
+        pass
+
+    def OnExport_gra(self, event):
+        #EXPORT AS IMAGE FILE OR PDF
+        pass
+
+    def OnExit(self, event):
+        global tempFile
+        global newProject
+        global fullPath
+        global newFile
+        global sfile
+        self.Destroy()
+        if os.path.isfile(fullPath):
+            #os.remove(fullPath)
+            self.Destroy()
+        else:
+            dlg = wx.MessageDialog(None, "No saved file. Are you sure you want to exit?", "No file saved",  wx.YES_NO)
+            if dlg.ShowModal() == wx.YES:
+                self.Destroy()
+            else:
+                pass
+
+    def OnNewy(self, event):
+        pass
+
+    def OnAddy(self, event):
+        pass
+
+    def OnFlota(self, event):
+        pass
+
+    def OnWindag_h(self, event):
+        pass
+
+    def OnSails(self, event):
+        pass
+
+    def OnSails_set(self, event):
+        pass
+
+    def OnWinds(self, event):
+        pass
+
+    def OnWinda(self, event):
+        pass
+
+    def OnRigt(self, event):
+        pass
+
+    def OnWindag_r(self, event):
+        pass
+
+    def OnOpsets(self, event):
+        pass
+
+    def OnHydrom(self, event):
+        pass
+
+    def OnAerom(self, event):
+        pass
+
+    def OnReport_out(self, event):
+        pass
+
+    def OnGraph_out(self, event):
+        pass
+
+    def OnRy_full(self, event):
+        pass
+
+    def OnRy_report(self, event):
+        pass
+
+    def OnRy_graph(self, event):
+        pass
+
+    def OnRf_full(self, event):
+        pass
+
+    def OnRf_report(self, event):
+        pass
+
+    def OnRf_graph(self, event):
+        pass
+
+    def OnSelChanged(self, event):
+        pass
+
+app = wx.App(True)
+frame = MainFrame(None, "Hp_VPP")
+app.MainLoop()
