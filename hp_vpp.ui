@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>914</width>
+    <height>872</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>914</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuImport">
+     <property name="title">
+      <string>Import</string>
+     </property>
+     <widget class="QMenu" name="menuCFD_data">
+      <property name="title">
+       <string>CFD data</string>
+      </property>
+      <addaction name="actionAero"/>
+      <addaction name="actionHydro"/>
+     </widget>
+     <widget class="QMenu" name="menuEFD_data">
+      <property name="title">
+       <string>EFD data</string>
+      </property>
+      <addaction name="actionAero_2"/>
+      <addaction name="actionHydro_2"/>
+     </widget>
+     <addaction name="menuCFD_data"/>
+     <addaction name="menuEFD_data"/>
+    </widget>
+    <widget class="QMenu" name="menuExport">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <addaction name="actionReport_as_PDF"/>
+     <addaction name="actionGraph_as_JPEG"/>
+    </widget>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen_run"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSave_as"/>
+    <addaction name="menuImport"/>
+    <addaction name="menuExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuYacht">
+    <property name="title">
+     <string>Yacht</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuSails">
+    <property name="title">
+     <string>Sails</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuRig">
+    <property name="title">
+     <string>Rig</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuOpsets">
+    <property name="title">
+     <string>Opsets</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuWind">
+    <property name="title">
+     <string>Wind</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuRun">
+    <property name="title">
+     <string>Run</string>
+    </property>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuYacht"/>
+   <addaction name="menuSails"/>
+   <addaction name="menuRig"/>
+   <addaction name="menuOpsets"/>
+   <addaction name="menuWind"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuRun"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionNew">
+   <property name="text">
+    <string>New run</string>
+   </property>
+  </action>
+  <action name="actionOpen_run">
+   <property name="text">
+    <string>Open run</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionSave_as">
+   <property name="text">
+    <string>Save as</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionAero">
+   <property name="text">
+    <string>Aero</string>
+   </property>
+  </action>
+  <action name="actionHydro">
+   <property name="text">
+    <string>Hydro</string>
+   </property>
+  </action>
+  <action name="actionAero_2">
+   <property name="text">
+    <string>Aero</string>
+   </property>
+  </action>
+  <action name="actionHydro_2">
+   <property name="text">
+    <string>Hydro</string>
+   </property>
+  </action>
+  <action name="actionReport_as_PDF">
+   <property name="text">
+    <string>Report as PDF</string>
+   </property>
+  </action>
+  <action name="actionGraph_as_JPEG">
+   <property name="text">
+    <string>Graph as JPEG</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

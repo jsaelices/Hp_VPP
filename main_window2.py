@@ -134,10 +134,10 @@ class MainFrame(wx.Frame):
         file_menu = wx.Menu()
 
         global new_run
-        menuBar.Append(file_menu, "File")
-        new_run = file_menu.Append(wx.ID_NEW, "New Run", "New VPP run for a yacht or fleet")
+        menuBar.Append(file_menu,"File")
+        new_run = file_menu.Append(wx.ID_NEW, "New Run","New VPP run for a yacht or fleet")
         self.Bind(wx.EVT_MENU, self.OnNewRun, new_run)
-        open_run = file_menu.Append(wx.ID_OPEN, "Open Run", "Open a previous VPP project")
+        open_run = file_menu.Append(wx.ID_OPEN, "Open Run","Open a previous VPP project")
         self.Bind(wx.EVT_MENU, self.OnOpenRun, open_run)
         save = file_menu.Append(wx.ID_SAVE, "Save", "Save the project with initial name")
         self.Bind(wx.EVT_MENU, self.OnSave, save)
@@ -148,21 +148,15 @@ class MainFrame(wx.Frame):
         cfd_menu = wx.Menu()
         efd_menu = wx.Menu()
 
-        file_menu.AppendMenu(import_menu, "Import")
-
-        import_menu.AppendMenu(cfd_menu, "CFD data")
-
-        aero_cfd = cfd_menu.Append(wx.ID_ANY, "CFD aero data", "Import aero data from CFD analysis")
+        file_menu.AppendSubMenu(import_menu, "Import")
+        import_menu.AppendSubMenu(cfd_menu, "CFD data")
+        aero_cfd = cfd_menu.AppendSubMenu(wx.ID_ANY, "CFD aero data", "Import aero data from CFD analysis")
         self.Bind(wx.EVT_MENU, self.OnImport_cfd_aero_data, aero_cfd)
-        hydro_cfd = cfd_menu.Append(wx.ID_ANY, "CFD hydro data", "Import hydro data from CFD analysis")
+        hydro_cfd = cfd_menu.AppendSubMenu(wx.ID_ANY, "CFD hydro data", "Import hydro data from CFD analysis")
         self.Bind(wx.EVT_MENU, self.OnImport_cfd_hydro_data, hydro_cfd)
 
-        import_menu.AppendMenu(efd_menu, "EFD data")
-
-        aero_efd = efd_menu.Append(wx.ID_ANY, "EFD aero data", "Import aero data from experimental tests")
-        self.Bind(wx.EVT_MENU, self.OnImport_efd_aero_data, aero_efd)
-        hydro_efd = efd_menu.Append(wx.ID_ANY, "EFD hydro data", "Import hydro data from experimental tests")
-        self.Bind(wx.EVT_MENU, self.OnImport_efd_hydro_data, hydro_efd)
+        import_efd = import_menu.Append(wx.ID_ANY, "EFD data", "Import data from experimental tests")
+        self.Bind(wx.EVT_MENU, self.OnImportdata, import_efd)
 
         export_menu = wx.Menu()
 
@@ -398,7 +392,7 @@ class MainFrame(wx.Frame):
             wx.MessageBox("No file to open")
         pass
 
-    def OnImport_efd_hydro_data(self, event):
+    def OnImport_efd_aero_data(self, event):
         wildcard = "*.csv"
         dlg = wx.FileDialog(self, "Open a csv data file", "", "",  wildcard, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:

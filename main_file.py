@@ -7,70 +7,12 @@ __status__ = 'dev'
 
 import wx
 import os
-import csv
-import sys
-import numpy as np
-import shutil
-import glob
-import subprocess
-import time
-import threading
+import splash
 import tempfile
-import xml.dom.minidom
-import math
-import matplotlib
-matplotlib.interactive(False)
-matplotlib.use('WXAgg')
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import *
-from matplotlib.font_manager import FontProperties
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
-import pandas
-import argparse
-import new_funct
-
-class splashScreen(wx.SplashScreen):
-
-    def __init__(self, parent=None):
-        tobitmap = wx.Image(name= "graphics\\logo.png").ConvertToBitmap()
-        splashStyle = wx.SPLASH_CENTER_ON_SCREEN | wx.SPLASH_TIMEOUT
-        splashDuration = 4000
-        wx.SplashScreen.__init__(self, tobitmap, splashStyle, splashDuration, parent)
-
-    # def OnExit(self, evt):
-    #     self.Hide()
-    #     MyFrame = App(None, -1, "-")
-    #     app.SetTopWindow(MyFrame)
-    #     MyFrame.Show(True)
-    #     evt.Skip()
-
-class NodeTree(wx.TreeCtrl):
-
-    def __init__(self, parent, id, position, size, style):
-        global newFile
-        tree_case = wx.TreeCtrl.__init__(self, parent, id, position, size, style)
-        root = self.AddRoot(newFile)
-        hc = self.AppendItem(root, 'Hydro components')
-        ac = self.AppendItem(root, 'Aero components')
-        rns = self.AppendItem(root, 'Runs')
-        # self.AppendItem(hc, 'Linux')
-        # self.AppendItem(hc, 'FreeBSD')
-        # self.AppendItem(hc, 'OpenBSD')
-        # self.AppendItem(hc, 'NetBSD')
-        # self.AppendItem(hc, 'Solaris')
-        # cl = self.AppendItem(ac, 'Compiled languages')
-        # sl = self.AppendItem(ac, 'Scripting languages')
-        # self.AppendItem(rns, 'PHP')
-        # self.AppendItem(rns, 'Qt')
-        # self.AppendItem(rns, 'MFC')
-        self.ExpandAll()
+import datetime as dt
 
 class TabPanel(wx.Panel):
-
     def __init__(self, parent):
-
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -83,18 +25,27 @@ class TabPanel(wx.Panel):
 
         self.SetSizer(sizer)
 
-class nbk_reports(wx.Notebook):
+class NodeTree(wx.TreeCtrl):
+    def __init__(self, parent, id, position, size, style):
+        global newFile
+        tree_case = wx.TreeCtrl.__init__(self, parent, id, position, size, style)
+        root = self.AddRoot(newFile)
+        hc = self.AppendItem(root, 'Hydro components')
+        ac = self.AppendItem(root, 'Aero components')
+        ops = self.AppendItem(root, 'Opsets')
+        rns = self.AppendItem(root, 'Runs')
+        self.ExpandAll()
 
+class nbk_reports(wx.Notebook):
     def __init__(self, parent):
         wx.Notebook.__init__(self, parent, id=wx.ID_ANY, style=wx.BK_DEFAULT)
-
-        # Create the first tab and add it to the notebook
         tabOne = TabPanel(self)
         self.AddPage(tabOne, "Hydro forces")
         tabTwo = TabPanel(self)
         self.AddPage(tabTwo, "Aero forces")
         self.AddPage(TabPanel(self), "Equilibrium")
         self.AddPage(TabPanel(self), "Global report")
+        self.AddPage(TabPanel(self), "Graphs")
 
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
@@ -113,27 +64,21 @@ class nbk_reports(wx.Notebook):
         print 'OnPageChanging, old:%d, new:%d, sel:%d\n' % (old, new, sel)
         event.Skip()
 
-class NewWindow(wx.Frame):
-
-    def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, wx.ID_ANY, "")
-        wx.Frame.CenterOnScreen(self)
-        wx.Panel(self)
-
 class MainFrame(wx.Frame):
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title="High Performance Velocity Prediction Program")
 
-        mySplash = splashScreen()
-        mySplash.Show()
-        #wx.Sleep(4)
+        #mySplash = splash.splashScreen()
+        #mySplash.Show()
 
         menuBar = wx.MenuBar()
+        self.CreateStatusBar()
 
         file_menu = wx.Menu()
 
         global new_run
+
         menuBar.Append(file_menu, "File")
         new_run = file_menu.Append(wx.ID_NEW, "New Run", "New VPP run for a yacht or fleet")
         self.Bind(wx.EVT_MENU, self.OnNewRun, new_run)
@@ -148,16 +93,16 @@ class MainFrame(wx.Frame):
         cfd_menu = wx.Menu()
         efd_menu = wx.Menu()
 
-        file_menu.AppendMenu(import_menu, "Import")
+        file_menu.AppendMenu(wx.ID_ANY, "Import", import_menu)
 
-        import_menu.AppendMenu(cfd_menu, "CFD data")
+        import_menu.AppendMenu(wx.ID_ANY, "CFD data", cfd_menu)
 
         aero_cfd = cfd_menu.Append(wx.ID_ANY, "CFD aero data", "Import aero data from CFD analysis")
         self.Bind(wx.EVT_MENU, self.OnImport_cfd_aero_data, aero_cfd)
         hydro_cfd = cfd_menu.Append(wx.ID_ANY, "CFD hydro data", "Import hydro data from CFD analysis")
         self.Bind(wx.EVT_MENU, self.OnImport_cfd_hydro_data, hydro_cfd)
 
-        import_menu.AppendMenu(efd_menu, "EFD data")
+        import_menu.AppendMenu(wx.ID_ANY, "EFD data", efd_menu)
 
         aero_efd = efd_menu.Append(wx.ID_ANY, "EFD aero data", "Import aero data from experimental tests")
         self.Bind(wx.EVT_MENU, self.OnImport_efd_aero_data, aero_efd)
@@ -171,7 +116,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExport_rep, export_rep)
         export_gra = export_menu.Append(wx.ID_ANY, "Graph", "Export graph as a picture")
         self.Bind(wx.EVT_MENU, self.OnExport_gra, export_gra)
-
+        file_menu.AppendSeparator()
         exit = file_menu.Append(wx.ID_EXIT, "Exit", "Exit from the application")
         self.Bind(wx.EVT_MENU, self.OnExit, exit)
         self.Bind(wx.EVT_CLOSE, self.OnExit)
@@ -181,8 +126,6 @@ class MainFrame(wx.Frame):
         menuBar.Append(yacht_menu, "Yacht")
         newy = yacht_menu.Append(wx.ID_ANY, "New yacht", "Create new yacht to analyze")
         self.Bind(wx.EVT_MENU, self.OnNewy, newy)
-        addy = yacht_menu.Append(wx.ID_ANY, "Add yacht", "Add yacht to perform fleet analysis")
-        self.Bind(wx.EVT_MENU, self.OnAddy, addy)
         flota = yacht_menu.Append(wx.ID_ANY, "Flotation", "Flotation data")
         self.Bind(wx.EVT_MENU, self.OnFlota, flota)
         windag_h = yacht_menu.Append(wx.ID_ANY, "Windage", "Hull windage data")
@@ -253,6 +196,9 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(menuBar)
         self.Show(True)
 
+        global fullPath
+        fullPath = ""
+
     def OnNewRun(self, event):
         global new_run
         global curDir
@@ -261,12 +207,9 @@ class MainFrame(wx.Frame):
         global newFile
         global newProject
         tmp = tempfile.mkstemp(text=True)
-        #TWO methods to operate on file:
-        #f = os.fdopen(tmp[0])
-        #f.write("thing to write")
-        #or
-        #f = open(tmp[1], "w")
-        #f.write("towrite")
+        f = open(tmp[1], "w")
+        f.write("hp_VPP temporary file\n")
+        f.write(str(dt.datetime.today()))
         tempFile = tmp[1]
         curDir = os.getcwd()
         extension = ".vpp"
@@ -274,17 +217,16 @@ class MainFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             newProject = dlg.GetValue()
             newFile = newProject + extension
-            #fileOper = open(newFile, "wb")
-            #fileOper.write("New vpp data file created temporary")
-            #fileOper.close()
             fullPath = os.path.join(curDir, newFile)
             self.showEnvironment()
             new_run.Enable(False)
             return fullPath
         else:
             pass
+        self.Refresh()
 
     def showEnvironment(self):
+        global newFile
         self.splitter = wx.SplitterWindow(self, -1, style=wx.SP_3D)
         leftPanel = wx.Panel(self.splitter, -1)
         leftBox = wx.BoxSizer(wx.VERTICAL)
@@ -300,7 +242,7 @@ class MainFrame(wx.Frame):
         rightPanel.SetSizerAndFit(rightBox)
         self.splitter.SplitVertically(leftPanel, rightPanel)
         self.Centre()
-        self.CreateStatusBar()
+        self.Refresh()
 
     def OnOpenRun(self, event):
         wildcard = "*.vpp"
@@ -422,21 +364,20 @@ class MainFrame(wx.Frame):
         global fullPath
         global newFile
         global sfile
-        self.Destroy()
         if os.path.isfile(fullPath):
-            #os.remove(fullPath)
+            os.remove(fullPath)
+            os.remove(tempFile)
             self.Destroy()
         else:
             dlg = wx.MessageDialog(None, "No saved file. Are you sure you want to exit?", "Warning",  wx.YES_NO)
-            if dlg.ShowModal() == wx.YES:
+            if dlg.ShowModal() == wx.ID_YES:
                 self.Destroy()
-            #else:
-                #pass
+                os.remove(tempFile)
+            else:
+                pass
+
 
     def OnNewy(self, event):
-        pass
-
-    def OnAddy(self, event):
         pass
 
     def OnFlota(self, event):

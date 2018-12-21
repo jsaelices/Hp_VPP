@@ -1,0 +1,1 @@
+python equilComp.py test_exec -p 20 -e 8 -j 10 -ig 20 -sl 16 -bad 2 -ehm 22 -fam 1.7 -b 6 -emdc 0.325
